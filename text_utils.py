@@ -4,8 +4,11 @@ import math
 import operator
 
 # Tf-idf with TextBlob
-def tf(word, blob):
-    return blob.words.count(word) / len(blob.words)
+def tf(word, blob, sublinear=False):
+    if sublinear:
+        return 1 + math.log(blob.words.count(word) / len(blob.words))
+    else:
+        return blob.words.count(word) / len(blob.words)
 
 def n_containing(word, bloblist):
     return sum(1 for blob in bloblist if word in blob)
@@ -43,7 +46,7 @@ def cluster_aggregator(documents_list, cluster_map):
             if clu_index == clu:
                 doc_list.append(documents_list[pos])
         documents_clustered.append(doc_list)
-    documents_clustered = [', '.join(i) for i in documents_clustered]
+    documents_clustered = [','.join(i) for i in documents_clustered]
     return documents_clustered
     
 def rank_clusters(cluster_map):
@@ -66,6 +69,24 @@ def jaccard_score(string1, string2, string_list, separator=' ', smoothing=0):
             union_score += 1
     return float(intersection_score)/union_score
     
+# performance test with re
+import re    
+def jaccard_score_2(string1, string2, string_list, separator=' ', smoothing=0):
+    """returns jaccard score: intersection/union where
+    intersection: how many string_list elements have both string1 AND string2
+    union: how many string_list elements have string1 OR string2
+    separator: if space, search for string1 and string between words"""
+    intersection_score = smoothing
+    union_score = smoothing
+    for doc in string_list:
+        s1_in_doc = re.search(r"\b"+string1+r"\b", doc)
+        s2_in_doc = re.search(r"\b"+string2+r"\b", doc)
+        if s1_in_doc and s2_in_doc:
+            intersection_score += 1
+        if s1_in_doc or s2_in_doc:
+            union_score += 1
+    return float(intersection_score)/union_score    
+    
 def prob_score(string1, string2, string_list, separator=' ', smoothing=0):
     """returns probability score = p(s1, s2)/(p(s1)*p(s2))"""
     n = len(string_list)
@@ -85,9 +106,61 @@ def prob_score(string1, string2, string_list, separator=' ', smoothing=0):
 def relationship_matrix(elements_list, documents_list, scoring_method='jaccard_score', smoothing=0, separator=' '):
     """returns diagonal relationship matrix with elements_list rows and columns.
     scoring_method: jaccard_score or prob_score. element_list must have not duplicated values"""
+    rel_matrix =[]
     for i in elements_list:
         row = []
         for j in elements_list:
-            row.append(getattr(scoring_method)(i, j, documents_list, separator=separator, smoothing=smoothing))
-        ingredients_rel_matrix.append(row)
+            row.append(getattr(__import__(__name__), scoring_method)(i, j, documents_list, separator=separator, smoothing=smoothing))
+        rel_matrix.append(row)
+    return rel_matrix
         
+def variance_score(string, string_list, separator=' '):
+    """returns variance score: p(1-p)"""
+    n = len(string_list)
+    p_score = 0
+    for doc in string_list:
+        doc_tokens = doc.split(separator)
+        if (string in doc_tokens):
+            p_score += 1
+    p_score = float(p_score)/n
+    return p_score*(1-p_score)
+    
+def info_entropy_score(string, string_list, separator=' '):
+    """returns information entropy score: -p(log(p))"""
+    n = len(string_list)
+    p_score = 0
+    for doc in string_list:
+        doc_tokens = doc.split(separator)
+        if (string in doc_tokens):
+            p_score += 1
+    p_score = float(p_score)/n
+    return -p_score*math.log(p_score)
+
+def matrix_to_json(clusters_list, relationship_matrix, nodes_names, filename='rel_matrix.json'):
+    """Create and save json file for d3 visualization"""
+    links_list = []
+    for row in range(len(relationship_matrix)):
+        for column in range(len(relationship_matrix[0])):
+           if row > column and round(relationship_matrix[row][column]*100) != 0:
+                links_list.append({"source": row, "target": column, "value": round(relationship_matrix[row][column]*100)})
+    nodes_list = []
+    for i in range(len(nodes_names)):
+        nodes_list.append({'name':nodes_names[i], 'group': clusters_list[i]})
+    links_nodes = {}
+    links_nodes = {"nodes": nodes_list, 'links': links_list}
+    with open(filename, 'w') as outfile:
+        outfile.write(str(links_nodes).replace('\'','\"').replace('u\"','\"'))
+    return filename
+    
+def reset_diagonal(matrix, value):
+    """change the diagonal value of a matrix"""
+    resetted_diag =[]
+    for i in range(len(matrix)):
+        row = []
+        for j in range(len(matrix)):
+            if i==j:
+                row.append(value)
+            else:
+                row.append(matrix[i][j])
+        resetted_diag.append(row)
+    return resetted_diag

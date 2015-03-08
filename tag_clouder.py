@@ -1,5 +1,6 @@
 ### Cloned and adapted from https://github.com/roshansingh/python-tagcloud
 
+from __future__ import unicode_literals
 from PIL import Image, ImageDraw, ImageFont
 import math, os
 import random
@@ -7,7 +8,7 @@ import uuid
 
 class TagCloud(object):
 
-	FONT = '/Library/Fonts/AppleGothic.ttf'
+	FONT = '/Library/Fonts/DejaVuSansMono.ttf'
 	#FONT_COLOR = ['#aab5f0', '#99ccee', '#a0ddff', '#90c5f0', '#90a0dd', '#90c5f0', '#39d', '#C8E1c2', '#88BCE2', '#0cf']
 	#FONT_COLOR = ['#F2B701', '#E57D04', '#DC0030', '#B10058', '#7C378A', '#3465AA', '#09A275', '#85BC5F', '#39d', '#aab5f0']
 	FONT_COLOR = ['#C3331C', '#CB1708', '#3B2821', '#AA7C13', '#8C8D3D', '#E6AC02', '#F5F24B', '#1A6802', '#4CAA52', '#aab5f0']
